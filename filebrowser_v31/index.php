@@ -294,6 +294,17 @@ if(isset($_POST['action'])&&$_POST['action']==='move_item'){
 }
 
 // ── NEW FOLDER ────────────────────────────────────────────────
+if(isset($_POST['action'])&&$_POST['action']==='rename_item'){
+    header('Content-Type: application/json');
+    $src=safe_path(trim($_POST['src']??'','/\\')); $nm=preg_replace('/[^\w\-. ]/u','_',trim($_POST['name']??''));
+    if($src&&$nm!==''&&file_exists($src)&&is_writable(dirname($src))){
+        $dst=dirname($src).'/'.$nm;
+        if(file_exists($dst)&&$dst!==$src){ echo json_encode(['ok'=>false,'msg'=>'Există deja un fișier cu acest nume.']); exit; }
+        echo rename($src,$dst)?json_encode(['ok'=>true,'name'=>$nm]):json_encode(['ok'=>false,'msg'=>'Redenumire eșuată.']);
+    } else echo json_encode(['ok'=>false,'msg'=>'Parametri invalizi.']);
+    exit;
+}
+
 if(isset($_POST['action'])&&$_POST['action']==='new_folder'){
     $dir=safe_path(trim($_POST['dir']??'','/\\')); $nm=preg_replace('/[^\w\-. ]/u','_',trim($_POST['name']??''));
     if($dir&&is_dir($dir)&&is_writable($dir)&&$nm!==''){
@@ -663,6 +674,7 @@ button:hover{background:#1d4ed8}
 <!-- CONTEXT MENU -->
 <div id="ctx-menu">
   <div class="ctx-item" id="ctx-download">&#11123; Descarcă</div>
+  <div class="ctx-item" id="ctx-rename">&#9998; Redenumește</div>
   <div class="ctx-sep"></div>
   <div class="ctx-item" id="ctx-cut">&#9986; Decupează</div>
   <div class="ctx-item" id="ctx-copy">&#128203; Copiază</div>
@@ -688,6 +700,19 @@ button:hover{background:#1d4ed8}
     <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.9rem">
       <button id="nf-cancel" style="background:none;border:1px solid var(--border2);color:var(--text2);border-radius:7px;padding:.38rem .85rem;font-size:.83rem;cursor:pointer">Anulează</button>
       <button id="nf-ok"     style="background:var(--accent);border:none;color:#fff;border-radius:7px;padding:.38rem .9rem;font-size:.83rem;cursor:pointer">Creează</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RENAME -->
+<div id="modal-rename" style="display:none;position:fixed;inset:0;z-index:950;background:rgba(0,0,0,.6);align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:1.4rem 1.5rem;min-width:300px;box-shadow:0 16px 48px rgba(0,0,0,.6)">
+    <div style="font-size:.93rem;font-weight:600;color:var(--text);margin-bottom:.85rem">&#9998; Redenumește</div>
+    <input id="rename-input" type="text" autocomplete="off" maxlength="200"
+      style="width:100%;padding:.55rem .75rem;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-size:.87rem;outline:none;font-family:inherit;box-sizing:border-box">
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.9rem">
+      <button id="rename-cancel" style="background:none;border:1px solid var(--border2);color:var(--text2);border-radius:7px;padding:.38rem .85rem;font-size:.83rem;cursor:pointer">Anulează</button>
+      <button id="rename-ok"     style="background:var(--accent);border:none;color:#fff;border-radius:7px;padding:.38rem .9rem;font-size:.83rem;cursor:pointer">Salvează</button>
     </div>
   </div>
 </div>
@@ -719,7 +744,30 @@ button:hover{background:#1d4ed8}
 .f-item.cut-pending{opacity:.35}
 </style>
 
-<script src="app.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.polyfilled.js"></script>
+<script src="app.js" defer></script>
+<?php
+// Detectăm ce tipuri de fișiere există în folderul curent
+$hasAudio = false; $hasVideo = false; $hasImg = false;
+if(!empty($items)){
+    foreach($items as $_it){
+        if($_it['is_aud']) $hasAudio = true;
+        if($_it['is_vid']) $hasVideo = true;
+        if($_it['is_img']) $hasImg   = true;
+        if($hasAudio && $hasVideo && $hasImg) break;
+    }
+}
+if($hasAudio || $hasVideo):
+?>
+<script src="https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.polyfilled.js" defer></script>
+<?php endif; ?>
+<?php if($hasAudio): ?>
+<script src="player-audio.js" defer></script>
+<?php endif; ?>
+<?php if($hasVideo): ?>
+<script src="player-video.js" defer></script>
+<?php endif; ?>
+<?php if($hasImg): ?>
+<script src="lightbox.js" defer></script>
+<?php endif; ?>
 </body>
 </html>
